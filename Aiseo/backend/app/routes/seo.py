@@ -4,6 +4,7 @@ from app.core.security import get_current_user
 from sqlalchemy.orm import Session
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
+from app.services.llm import generate_blog  # 🔥 Groq service
 
 router = APIRouter(prefix="/seo", tags=["SEO"])
 
@@ -76,7 +77,7 @@ def keyword_history(
 
 
 # ---------------------------
-# Blog Writer (MOCK)
+# Blog Writer (Groq LLM)
 # ---------------------------
 class BlogRequest(BaseModel):
     keyword: str
@@ -89,30 +90,24 @@ def blog_writer(
     data: BlogRequest,
     current_user=Depends(get_current_user),
 ):
-    return {
-        "title": f"{data.keyword.title()} – Complete SEO Guide",
-        "meta_description": f"Learn everything about {data.keyword} with this SEO optimized guide.",
-        "outline": [
-            f"What is {data.keyword}?",
-            f"Why {data.keyword} matters",
-            f"How to use {data.keyword}",
-            f"Common mistakes",
-            f"Best practices",
-        ],
-        "content": f"""
-## What is {data.keyword}?
-{data.keyword} is an important concept in SEO.
+    """
+    Generates an SEO-optimized blog using Groq LLM.
+    Falls back safely if LLM fails.
+    """
+    try:
+        return generate_blog(
+            keyword=data.keyword,
+            tone=data.tone,
+            length=data.length,
+        )
 
-## Why {data.keyword} matters
-It helps improve visibility and rankings.
+    except Exception as e:
+        print("BLOG LLM ERROR:", e)
 
-## How to use {data.keyword}
-Use it naturally in headings and content.
-
-## Common mistakes
-Avoid keyword stuffing.
-
-## Best practices
-Focus on quality and user intent.
-"""
-    }
+        # 🔒 Safe fallback (never crash API)
+        return {
+            "title": f"{data.keyword.title()} – Complete SEO Guide",
+            "meta_description": "AI generation failed. Showing fallback content.",
+            "outline": [],
+            "content": "Blog generation failed. Please try again later.",
+        }

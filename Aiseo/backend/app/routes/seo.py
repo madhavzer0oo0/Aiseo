@@ -4,13 +4,16 @@ from app.core.security import get_current_user
 from sqlalchemy.orm import Session
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
-from app.services.llm import generate_blog  # 🔥 Groq service
+
+# 🔥 LLM services
+from app.services.llm import generate_blog
+from app.services.keyword_llm import analyze_keyword
 
 router = APIRouter(prefix="/seo", tags=["SEO"])
 
 
 # ---------------------------
-# Keyword Research
+# Keyword Research (LLM-enhanced)
 # ---------------------------
 @router.post("/keyword-research")
 def keyword_research(
@@ -20,19 +23,32 @@ def keyword_research(
 ):
     keyword = data["keyword"]
 
+    # 🔥 LLM-powered intent & clustering
+    try:
+        llm_data = analyze_keyword(keyword) or {}
+    except Exception as e:
+        print("KEYWORD LLM ERROR:", e)
+        llm_data = {}
+
     result = {
         "keyword": keyword,
-        "search_volume": 5400,
-        "difficulty": 42,
-        "intent": "Informational",
-        "related_keywords": [
-            f"{keyword} guide",
-            f"best {keyword}",
-            f"{keyword} for beginners",
-            f"{keyword} tips",
-        ],
+        "search_volume": 5400,   # mocked for now
+        "difficulty": 42,        # mocked for now
+        "intent": llm_data.get("intent", "Informational"),
+        "content_type": llm_data.get("content_type", "Guide"),
+        "related_keywords": llm_data.get(
+            "related_keywords",
+            [
+                f"{keyword} guide",
+                f"best {keyword}",
+                f"{keyword} for beginners",
+                f"{keyword} tips",
+            ],
+        ),
+        "keyword_clusters": llm_data.get("keyword_clusters", {}),
     }
 
+    # 🔒 Save core keyword info only (DB-safe)
     keyword_entry = Keyword(
         keyword=keyword,
         search_volume=result["search_volume"],

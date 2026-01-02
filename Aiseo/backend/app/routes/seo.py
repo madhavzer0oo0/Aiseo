@@ -5,6 +5,9 @@ from sqlalchemy.orm import Session
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
+# 🔍 SerpApi services
+from app.services.serpapi import get_serp_data, estimate_metrics
+
 # 🔥 LLM services
 from app.services.llm import generate_blog
 from app.services.keyword_llm import analyze_keyword
@@ -13,7 +16,7 @@ router = APIRouter(prefix="/seo", tags=["SEO"])
 
 
 # ---------------------------
-# Keyword Research (LLM-enhanced)
+# Keyword Research (SerpApi + LLM + Heuristics)
 # ---------------------------
 @router.post("/keyword-research")
 def keyword_research(
@@ -23,7 +26,17 @@ def keyword_research(
 ):
     keyword = data["keyword"]
 
-    # 🔥 LLM-powered intent & clustering
+    # 🔍 SerpApi: real Google data
+    try:
+        serp_data = get_serp_data(keyword)
+    except Exception as e:
+        print("SERPAPI ERROR:", e)
+        serp_data = {}
+
+    # 📊 Heuristic metrics from SERP
+    metrics = estimate_metrics(serp_data) if serp_data else {}
+
+    # 🔥 LLM: intent + clustering
     try:
         llm_data = analyze_keyword(keyword) or {}
     except Exception as e:
@@ -32,23 +45,38 @@ def keyword_research(
 
     result = {
         "keyword": keyword,
-        "search_volume": 5400,   # mocked for now
-        "difficulty": 42,        # mocked for now
+
+        # ✅ ESTIMATED (now dynamic, not static)
+        "search_volume": metrics.get("search_volume", 0),
+        "difficulty": metrics.get("difficulty", 0),
+        "metrics_type": "estimated",
+
+        # 🧠 LLM-powered understanding
         "intent": llm_data.get("intent", "Informational"),
         "content_type": llm_data.get("content_type", "Guide"),
-        "related_keywords": llm_data.get(
-            "related_keywords",
-            [
-                f"{keyword} guide",
-                f"best {keyword}",
-                f"{keyword} for beginners",
-                f"{keyword} tips",
-            ],
+
+        # 🔍 Real Google suggestions
+        "related_keywords": serp_data.get(
+            "related_searches",
+            llm_data.get(
+                "related_keywords",
+                [
+                    f"{keyword} guide",
+                    f"best {keyword}",
+                    f"{keyword} for beginners",
+                    f"{keyword} tips",
+                ],
+            ),
         ),
+
+        # 🔍 Google PAA
+        "people_also_ask": serp_data.get("people_also_ask", []),
+
+        # 🧠 Semantic clusters
         "keyword_clusters": llm_data.get("keyword_clusters", {}),
     }
 
-    # 🔒 Save core keyword info only (DB-safe)
+    # 🔒 Save only stable fields to DB
     keyword_entry = Keyword(
         keyword=keyword,
         search_volume=result["search_volume"],
@@ -106,10 +134,6 @@ def blog_writer(
     data: BlogRequest,
     current_user=Depends(get_current_user),
 ):
-    """
-    Generates an SEO-optimized blog using Groq LLM.
-    Falls back safely if LLM fails.
-    """
     try:
         return generate_blog(
             keyword=data.keyword,
@@ -120,7 +144,6 @@ def blog_writer(
     except Exception as e:
         print("BLOG LLM ERROR:", e)
 
-        # 🔒 Safe fallback (never crash API)
         return {
             "title": f"{data.keyword.title()} – Complete SEO Guide",
             "meta_description": "AI generation failed. Showing fallback content.",

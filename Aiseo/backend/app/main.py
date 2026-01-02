@@ -11,7 +11,7 @@ app = FastAPI(title="AISEO Backend")
 # 🔥 CORS MUST be added BEFORE routes
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],   # THIS enables OPTIONS
     allow_headers=["*"],   # THIS enables preflight headers

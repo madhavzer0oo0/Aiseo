@@ -32,7 +32,7 @@ export default function DashBoard() {
   ------------------------------ */
   const fetchHistory = async () => {
     try {
-      const res = await axios.get("http://127.0.0.1:8000/seo/history", {
+      const res = await axios.get(" https://aiseo-dq1q.onrender.com/seo/history", {
         headers: {
           Authorization: `Bearer ${localStorage.getItem("token")}`,
         },
@@ -72,7 +72,7 @@ export default function DashBoard() {
 
     try {
       const res = await axios.post(
-        "http://127.0.0.1:8000/seo/blog-writer",
+        " https://aiseo-dq1q.onrender.com/seo/blog-writer",
         { keyword, tone, length },
         {
           headers: {

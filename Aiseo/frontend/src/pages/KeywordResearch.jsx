@@ -17,7 +17,7 @@ export default function KeywordResearch() {
  const fetchHistory = async () => {
   try {
     const res = await axios.get(
-      "http://127.0.0.1:8000/seo/history",
+      " https://aiseo-dq1q.onrender.com/seo/history",
       {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -51,7 +51,7 @@ export default function KeywordResearch() {
       
 
       const res = await axios.post(
-        "http://127.0.0.1:8000/seo/keyword-research",
+        " https://aiseo-dq1q.onrender.com/seo/keyword-research",
         { keyword: kw },
         {
           headers: {

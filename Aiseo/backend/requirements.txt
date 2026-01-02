@@ -6,3 +6,4 @@ passlib[bcrypt]
 python-dotenv
 groq
 google-search-results
+pydantic[email]
